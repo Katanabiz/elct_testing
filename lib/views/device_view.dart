@@ -114,20 +114,20 @@ class DeviceView extends StatelessWidget {
                 leading: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    snapshot.data == BluetoothDeviceState.connected
-                        ? const Icon(Icons.bluetooth_connected,
-                            color: Colors.lightGreen)
-                        : const Icon(Icons.bluetooth_disabled,
-                            color: Colors.red),
                     // snapshot.data == BluetoothDeviceState.connected
-                    //     ? StreamBuilder<int>(
-                    //         stream: rssiStream(),
-                    //         builder: (context, snapshot) {
-                    //           return Text(
-                    //               snapshot.hasData ? '${snapshot.data}dBm' : '',
-                    //               style: Theme.of(context).textTheme.caption);
-                    //         })
-                    //     : Text('', style: Theme.of(context).textTheme.caption),
+                    //     ? const Icon(Icons.bluetooth_connected,
+                    //         color: Colors.lightGreen)
+                    //     : const Icon(Icons.bluetooth_disabled,
+                    //         color: Colors.r ed),
+                    snapshot.data == BluetoothDeviceState.connected
+                        ? StreamBuilder<int>(
+                            stream: rssiStream(),
+                            builder: (context, snapshot) {
+                              return Text(
+                                  snapshot.hasData ? '${snapshot.data}dBm' : '',
+                                  style: Theme.of(context).textTheme.caption);
+                            })
+                        : Text('', style: Theme.of(context).textTheme.caption),
                   ],
                 ),
                 title: Text(
@@ -135,7 +135,9 @@ class DeviceView extends StatelessWidget {
                     style: (snapshot.data == BluetoothDeviceState.connected)
                         ? const TextStyle(color: Colors.lightGreen)
                         : const TextStyle(color: Colors.red)),
-                subtitle: Text('${device.name}'),
+                subtitle: snapshot.data == BluetoothDeviceState.connected
+                    ? Text('${device.name}')
+                    : Text(''),
                 trailing: snapshot.data == BluetoothDeviceState.connected
                     ? StreamBuilder<bool>(
                         stream: device.isDiscoveringServices,
@@ -200,7 +202,7 @@ class DeviceView extends StatelessWidget {
     });
     while (isConnected) {
       yield await device.readRssi();
-      await Future.delayed(const Duration(seconds: 10));
+      await Future.delayed(const Duration(seconds: 60));
       //call services
       device.services.listen((List<BluetoothService> services) {
         readServices(services);
@@ -211,7 +213,7 @@ class DeviceView extends StatelessWidget {
   }
 
   readServices(List<BluetoothService> services) async {
-    List sendingData = [];
+    //List sendingData = [];
     for (BluetoothService service in services) {
       for (var characteristic in service.characteristics) {
         if (characteristic.properties.read) {
@@ -220,7 +222,7 @@ class DeviceView extends StatelessWidget {
           //   characteristic.read();
           // });
           try {
-            await characteristic.read().then((value) => () {
+            await characteristic.read().then((value) => (value) {
                   if (value.isNotEmpty) {
                     var jsondata = {
                       "serviceName": characteristic.uuid.toString(),
@@ -228,10 +230,12 @@ class DeviceView extends StatelessWidget {
                       "name": DummyData.lookup1(characteristic.uuid.toString()),
                       "value": (String.fromCharCodes(value) != "")
                           ? String.fromCharCodes(value)
-                          : "--"
+                          : "--",
+                      "sendingType": 1,
+                      "status": 1
                     };
                     print("value: $jsondata");
-                    sendingData.add(jsondata);
+                    sendData(jsondata);
                   }
                 });
           } catch (err) {
@@ -241,12 +245,12 @@ class DeviceView extends StatelessWidget {
       }
     }
 
-    if (sendingData.isNotEmpty) sendData(sendingData);
+    //if (sendingData.isNotEmpty) sendData(sendingData);
   }
 
-  Future<RawData> sendData(data) async {
+  Future<void> sendData(data) async {
     final http.Response response = await http.post(
-        Uri.parse('https://uzoffer.com/cte/device/BulkInsertRawData'),
+        Uri.parse('https://uzoffer.com/cte/device/InsertRawData'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -258,9 +262,10 @@ class DeviceView extends StatelessWidget {
     // Dispatch action depending upon
     // the server response
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return RawData.fromJson(json.decode(response.body));
+      //return RawData.fromJson(json.decode(response.body));
+      print("success");
     } else {
-      throw Exception('Raw data sending failed!');
+      print('Raw data sending failed!');
     }
   }
 }
