@@ -222,22 +222,22 @@ class DeviceView extends StatelessWidget {
           //   characteristic.read();
           // });
           try {
-            await characteristic.read().then((value) => (value) {
-                  if (value.isNotEmpty) {
-                    var jsondata = {
-                      "serviceName": characteristic.uuid.toString(),
-                      "serviceValue": value.toString(),
-                      "name": DummyData.lookup1(characteristic.uuid.toString()),
-                      "value": (String.fromCharCodes(value) != "")
-                          ? String.fromCharCodes(value)
-                          : "--",
-                      "sendingType": 1,
-                      "status": 1
-                    };
-                    print("value: $jsondata");
-                    sendData(jsondata);
-                  }
-                });
+            await characteristic.read().then((value) {
+              if (value.isNotEmpty) {
+                var jsondata = {
+                  "serviceName": characteristic.uuid.toString(),
+                  "serviceValue": value.toString(),
+                  "name": DummyData.lookup1(characteristic.uuid.toString()),
+                  "value": (String.fromCharCodes(value) != "")
+                      ? String.fromCharCodes(value)
+                      : "--",
+                  "sendingType": 1,
+                  "status": 1
+                };
+                print("value: $jsondata");
+                sendData(jsondata);
+              }
+            });
           } catch (err) {
             print("error: $err");
           }

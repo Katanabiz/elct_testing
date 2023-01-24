@@ -33,7 +33,7 @@ class CharacteristicTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text('Characteristic'),
+                // const Text('Characteristic'),
                 Text(DummyData.lookup1(characteristic.uuid.toString()),
                     style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
