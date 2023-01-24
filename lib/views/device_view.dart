@@ -202,7 +202,7 @@ class DeviceView extends StatelessWidget {
     });
     while (isConnected) {
       yield await device.readRssi();
-      await Future.delayed(const Duration(seconds: 60));
+      await Future.delayed(const Duration(seconds: 30));
       //call services
       device.services.listen((List<BluetoothService> services) {
         readServices(services);
