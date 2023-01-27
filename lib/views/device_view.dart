@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../api/api.dart';
 import '../dummy_data.dart';
-import 'package:http/http.dart' as http;
 
 import '../widgets/characteristic_tile_widget.dart';
 import '../widgets/descriptor_tile_widget.dart';
@@ -16,15 +16,15 @@ class DeviceView extends StatelessWidget {
 
   final BluetoothDevice device;
 
-  List<int> _getRandomBytes() {
-    final math = Random();
-    return [
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255)
-    ];
-  }
+  // List<int> _getRandomBytes() {
+  //   final math = Random();
+  //   return [
+  //     math.nextInt(255),
+  //     math.nextInt(255),
+  //     math.nextInt(255),
+  //     math.nextInt(255)
+  //   ];
+  // }
 
   List<Widget> _buildServiceTiles(List<BluetoothService> services) {
     return services
@@ -52,8 +52,18 @@ class DeviceView extends StatelessWidget {
                         .map(
                           (d) => DescriptorTile(
                             descriptor: d,
-                            onReadPressed: () => d.read(),
-                            onWritePressed: () => d.write(_getRandomBytes()),
+                            onReadPressed: () async {
+                              await d
+                                  .read()
+                                  .then((v) => d.value.listen((value) {
+                                        print(
+                                            "value: ${String.fromCharCodes(value)}");
+                                      }));
+
+                              var value = DummyData.lookup1(
+                                  d.serviceUuid.toString().toLowerCase());
+                              print(value);
+                            },
                           ),
                         )
                         .toList(),
@@ -192,6 +202,38 @@ class DeviceView extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton:
+          Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+        SizedBox(width: 5),
+        FloatingActionButton(
+            child: const Icon(Icons.radio_button_on),
+            onPressed: (() {
+              device.services.listen((List<BluetoothService> services) {
+                readServices(services, 2, 2);
+              });
+            })),
+        FloatingActionButton(
+            child: const Icon(Icons.close_outlined),
+            onPressed: (() {
+              device.services.listen((List<BluetoothService> services) {
+                readServices(services, 2, 3);
+              });
+            })),
+        FloatingActionButton(
+            child: const Icon(Icons.single_bed_sharp),
+            onPressed: (() {
+              device.services.listen((List<BluetoothService> services) {
+                readServices(services, 2, 4);
+              });
+            })),
+        FloatingActionButton(
+            child: const Icon(Icons.car_repair_sharp),
+            onPressed: (() {
+              device.services.listen((List<BluetoothService> services) {
+                readServices(services, 2, 1);
+              });
+            })),
+      ]),
     );
   }
 
@@ -202,28 +244,35 @@ class DeviceView extends StatelessWidget {
     });
     while (isConnected) {
       yield await device.readRssi();
-      await Future.delayed(const Duration(seconds: 30));
+      await Future.delayed(const Duration(minutes: 2));
       //call services
       device.services.listen((List<BluetoothService> services) {
-        readServices(services);
+        readServices(services, 1, 1);
       });
     }
     subscription.cancel();
     // Device disconnected, stopping RSSI stream
   }
 
-  readServices(List<BluetoothService> services) async {
+  readServices(
+      List<BluetoothService> services, int sendingType, int status) async {
     //List sendingData = [];
     for (BluetoothService service in services) {
       for (var characteristic in service.characteristics) {
         if (characteristic.properties.read) {
-          // characteristic.value.listen((value) {
-          //   print("value: ${String.fromCharCodes(value)}");
-          //   characteristic.read();
-          // });
           try {
-            await characteristic.read().then((value) {
+            await characteristic.read().then((value) async {
               if (value.isNotEmpty) {
+                var descriptors = characteristic.descriptors.toString();
+                // var descValue = "";
+                // for (BluetoothDescriptor d in descriptors) {
+                //   await d.read().then((value) {
+                //     descValue = value;
+                //   });
+                // }
+
+                //call current
+
                 var jsondata = {
                   "serviceName": characteristic.uuid.toString(),
                   "serviceValue": value.toString(),
@@ -231,11 +280,15 @@ class DeviceView extends StatelessWidget {
                   "value": (String.fromCharCodes(value) != "")
                       ? String.fromCharCodes(value)
                       : "--",
-                  "sendingType": 1,
-                  "status": 1
+                  "description": descriptors,
+                  "sendingType": sendingType,
+                  "status": status,
+                  "latitude": 1,
+                  "longitude": 1,
+                  "currentTimeZone": "-8:30"
                 };
                 print("value: $jsondata");
-                sendData(jsondata);
+                Api.sendData(jsondata);
               }
             });
           } catch (err) {
@@ -246,51 +299,5 @@ class DeviceView extends StatelessWidget {
     }
 
     //if (sendingData.isNotEmpty) sendData(sendingData);
-  }
-
-  Future<void> sendData(data) async {
-    final http.Response response = await http.post(
-        Uri.parse('https://uzoffer.com/cte/device/InsertRawData'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        // body: jsonEncode(<String, String>{
-        //   'title': title,
-        // }),
-        body: jsonEncode(data));
-
-    // Dispatch action depending upon
-    // the server response
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      //return RawData.fromJson(json.decode(response.body));
-      print("success");
-    } else {
-      print('Raw data sending failed!');
-    }
-  }
-}
-
-class RawData {
-  final int id;
-  final String serviceName;
-  final String serviceValue;
-  final String name;
-  final String value;
-
-  RawData(
-      {required this.id,
-      required this.serviceName,
-      required this.serviceValue,
-      required this.name,
-      required this.value});
-
-  factory RawData.fromJson(Map<String, dynamic> json) {
-    return RawData(
-      id: json['id'],
-      serviceName: json['serviceName'],
-      serviceValue: json['serviceValue'],
-      name: json['name'],
-      value: json['value'],
-    );
   }
 }

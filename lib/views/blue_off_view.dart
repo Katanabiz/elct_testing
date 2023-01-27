@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -8,22 +7,25 @@ class BlueOffView extends StatelessWidget {
 
   final BluetoothState? state;
 
-  // Future<void> requestLocationPermission() async {
-  //   final serviceStatusLocation = await Permission.locationWhenInUse.isGranted;
 
-  //   bool isLocation = serviceStatusLocation == ServiceStatus.enabled;
 
-  //   final status = await Permission.locationWhenInUse.request();
+  Future<void> requestLocationAndBlutoothPermission() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.locationWhenInUse,
+      Permission.bluetoothConnect,
+    ].request();
+    final serviceStatusLocation = await Permission.locationWhenInUse.isGranted;
+    final serviceStatusbluetooth = await Permission.bluetoothConnect.isGranted;
 
-  //   if (status == PermissionStatus.granted) {
-  //     print('Permission Granted');
-  //   } else if (status == PermissionStatus.denied) {
-  //     print('Permission denied');
-  //   } else if (status == PermissionStatus.permanentlyDenied) {
-  //     print('Permission Permanently Denied');
-  //     await openAppSettings();
-  //   }
-  // }
+    bool isLocation = (serviceStatusLocation && serviceStatusbluetooth) ==
+        ServiceStatus.enabled;
+
+    if (!await serviceStatusLocation && serviceStatusbluetooth) {
+      await statuses;
+    }
+    FlutterBluePlus.instance.turnOn();
+    isLocation;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,14 +51,9 @@ class BlueOffView extends StatelessWidget {
                     ?.copyWith(color: Colors.white),
               ),
               ElevatedButton(
-                onPressed: Platform.isAndroid
-                    ? () async {
-                        if (!await Permission.bluetoothConnect.isGranted) {
-                          await Permission.bluetoothConnect.request();
-                        }
-                        FlutterBluePlus.instance.turnOn();
-                      }
-                    : null,
+                onPressed: () {
+                  requestLocationAndBlutoothPermission();
+                },
                 child: const Text('TURN ON'),
               ),
             ],
@@ -67,5 +64,4 @@ class BlueOffView extends StatelessWidget {
   }
 }
 
-//  ? () => FlutterBluePlus.instance.turnOn()
-// : null,
+

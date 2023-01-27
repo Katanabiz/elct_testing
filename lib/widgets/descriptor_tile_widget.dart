@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../dummy_data.dart';
+
 class DescriptorTile extends StatelessWidget {
   final BluetoothDescriptor descriptor;
   final VoidCallback? onReadPressed;
@@ -21,18 +23,18 @@ class DescriptorTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const Text('Descriptor'),
-          Text('0x${descriptor.uuid.toString().toUpperCase().substring(4, 8)}',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyText1
-                  ?.copyWith(color: Theme.of(context).textTheme.caption?.color))
+          Text(DummyData.lookup1(descriptor.uuid.toString()),
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
       subtitle: StreamBuilder<List<int>>(
-        stream: descriptor.value,
-        initialData: descriptor.lastValue,
-        builder: (c, snapshot) => Text(snapshot.data.toString()),
-      ),
+          stream: descriptor.value,
+          initialData: descriptor.lastValue,
+          builder: (c, snapshot) {
+            final descriptorValue = snapshot.data;
+            return Text(
+                'Descriptor Value: ${String.fromCharCodes(descriptorValue!)}');
+          }),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
